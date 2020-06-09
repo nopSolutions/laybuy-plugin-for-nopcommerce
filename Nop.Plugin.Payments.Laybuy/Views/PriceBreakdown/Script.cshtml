@@ -1,0 +1,24 @@
+﻿@model (string WidgetZone, string InitialPrice, string Price)
+
+@if (Model.WidgetZone == PublicWidgetZones.ProductDetailsBottom)
+{
+    <script asp-location="Footer">
+        $(document).ready(function() {
+            $('div.prices').after(`@await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))`);
+        });
+    </script>
+}
+
+@if (Model.WidgetZone == PublicWidgetZones.ProductBoxAddinfoMiddle)
+{
+    @await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))
+}
+
+@if (Model.WidgetZone == PublicWidgetZones.OrderSummaryContentAfter)
+{
+    <script asp-location="Footer">
+        $(document).ready(function() {
+            $('div.total-info').after(`@await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))`);
+        });
+    </script>
+}

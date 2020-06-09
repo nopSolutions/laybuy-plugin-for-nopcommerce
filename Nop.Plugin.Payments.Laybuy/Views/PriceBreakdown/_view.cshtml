@@ -1,0 +1,14 @@
+﻿@model (string InitialPrice, string Price)
+
+<p>
+    @if (string.IsNullOrEmpty(Model.InitialPrice))
+    {
+        <span>or 6 weekly interest-free payments from <b>@Model.Price</b> with </span>
+    }
+    else
+    {
+        <span>or from <b>@Model.InitialPrice</b> today & 5 weekly interest-free payments of <b>@Model.Price</b> with </span>
+    }
+    <img src="https://www.laybuy.com/assets/laybuy-logo-small.svg" alt="Laybuy">
+    <a href="https://www.laybuy.com/how-it-works" target="_blank"><u>what's this?</u></a>
+</p>

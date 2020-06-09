@@ -1,0 +1,98 @@
+﻿@model ConfigurationModel
+
+@{
+    Layout = "_ConfigurePlugin";
+}
+
+@await Component.InvokeAsync("SettingMode")
+
+<form asp-controller="Laybuy" asp-action="Configure" method="post">
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <p>
+                    For plugin configuration follow these steps:<br />
+                    <br />
+                    1. Log into either the <a href="https://sandbox-dashboard.laybuy.com/merchant#/" target="_blank">Laybuy sandbox</a> or <a href="https://dashboard.laybuy.com/merchant#/" target="_blank">Laybuy production</a> merchant account.<br />
+                    2. On the main menu select <b>Account</b>.<br />
+                    3. Find your 'Merchant ID' and 'Authentication Key' in the section <b>API Details</b> then copy and paste it below in appropriate fields.<br />
+                    4. Save the configuration.<br />
+                    <br />
+                </p>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <nop-label asp-for="UseSandbox" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="UseSandbox" />
+                        <span asp-validation-for="UseSandbox"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <nop-label asp-for="MerchantId" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="MerchantId" asp-required="true" />
+                        <span asp-validation-for="MerchantId"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <nop-label asp-for="AuthenticationKey" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="AuthenticationKey" asp-required="true" asp-value="@Model.AuthenticationKey" />
+                        <span asp-validation-for="AuthenticationKey"></span>
+                    </div>
+                </div>
+                <div class="panel panel-default advanced-setting">
+                    <div class="panel-heading">
+                        @T("Plugins.Payments.Laybuy.PriceBreakdown")
+                    </div>
+                    <div class="panel-body">
+                        <p>
+                            Wanting to achieve some quick wins to improve the performance of your online store? <br />
+                            Below is a collection of settings recommended to enable to display the Laybuy price breakdown on a website. Merchants who have consistently implemented the below features continue to experience the greatest benefits from Laybuy's product offering.<br />
+                            You can find more details <a href="https://pages.laybuy.com/optimise-your-website-for-success" target="_blank">here</a>.
+                            <br />
+                        </p>
+                        <div class="form-group advanced-setting">
+                            <div class="col-md-3">
+                                <nop-label asp-for="DisplayPriceBreakdownOnProductPage" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="DisplayPriceBreakdownOnProductPage" />
+                                <span asp-validation-for="DisplayPriceBreakdownOnProductPage"></span>
+                            </div>
+                        </div>
+                        <div class="form-group advanced-setting">
+                            <div class="col-md-3">
+                                <nop-label asp-for="DisplayPriceBreakdownInProductBox" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="DisplayPriceBreakdownInProductBox" />
+                                <span asp-validation-for="DisplayPriceBreakdownInProductBox"></span>
+                            </div>
+                        </div>
+                        <div class="form-group advanced-setting">
+                            <div class="col-md-3">
+                                <nop-label asp-for="DisplayPriceBreakdownInShoppingCart" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="DisplayPriceBreakdownInShoppingCart" />
+                                <span asp-validation-for="DisplayPriceBreakdownInShoppingCart"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group"></div>
+                <div class="form-group">
+                    <div class="col-md-9 col-md-offset-3">
+                        <input type="submit" name="save" class="btn btn-primary" value="@T("Admin.Common.Save")" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
