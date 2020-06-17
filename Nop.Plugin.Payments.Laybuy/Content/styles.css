@@ -1,0 +1,90 @@
+﻿.laybuy-paragraph {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #000;
+  padding-bottom: 1em;
+}
+
+@media (max-width: 450px) {
+  .laybuy-paragraph {
+    justify-content: center;
+  }
+}
+
+.laybuy-paragraph > * {
+  margin-right: 0.25em;
+}
+
+.laybuy-paragraph span.laybuy-money {
+  font-size: 14px;
+  font-weight: 600 !important;
+  color: #000;
+}
+
+.laybuy-paragraph img#laybuy-logo {
+  width: 90px;
+  height: 20px;
+}
+
+.laybuy-paragraph a.laybuy-link {
+  font-size: 0.7rem;
+  color: inherit;
+}
+
+#laybuy-popup-wrapper {
+  position: fixed;
+  display: none;
+  z-index: 999999999;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+}
+
+#laybuy-popup-outer {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  -webkit-align-content: center;
+  -ms-flex-line-pack: center;
+  align-content: center;
+  -webkit-align-items: center;
+  -ms-flex-align: center;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+#laybuy-popup-inner {
+  width: 90vw;
+  max-width: 620px;
+  height: 482px;
+  position: relative;
+  border-radius: 0.65em;
+}
+
+#laybuy-popup-inner > iframe {
+  width: 100%;
+  height: calc(100% + 3.2em);
+  background: transparent;
+  border: 0;
+}
+
+.laybuy-link-inner {
+  text-decoration: underline;
+}
+
+@media screen and (max-width: 545px) {
+  #laybuy-popup-inner {
+    height: 800px;
+    margin: 2em 0 0;
+  }
+}

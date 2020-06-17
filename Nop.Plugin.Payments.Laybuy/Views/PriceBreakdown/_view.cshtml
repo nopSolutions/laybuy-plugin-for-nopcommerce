@@ -1,14 +1,23 @@
 ﻿@model (string InitialPrice, string Price)
 
-<p>
-    @if (string.IsNullOrEmpty(Model.InitialPrice))
-    {
-        <span>or 6 weekly interest-free payments from <b>@Model.Price</b> with </span>
-    }
-    else
-    {
-        <span>or from <b>@Model.InitialPrice</b> today & 5 weekly interest-free payments of <b>@Model.Price</b> with </span>
-    }
-    <img src="https://www.laybuy.com/assets/laybuy-logo-small.svg" alt="Laybuy">
-    <a href="https://www.laybuy.com/how-it-works" target="_blank"><u>what's this?</u></a>
-</p>
+@{
+    Html.AddCssFileParts("~/Plugins/Payments.Laybuy/Content/styles.css", excludeFromBundle: true);
+}
+
+<div class="laybuyInfo">
+    <p class="laybuy-paragraph">
+        @if (string.IsNullOrEmpty(Model.InitialPrice))
+        {
+            <span>or 6 weekly interest-free payments from <span class="laybuy-money">@Model.Price</span> with </span>
+        }
+        else
+        {
+            <span>or from <b>@Model.InitialPrice</b> today & 5 weekly interest-free payments of <span class="laybuy-money">@Model.Price</span> with </span>
+        }
+        <img id="laybuy-logo" src="https://www.laybuy.com/assets/laybuy-logo-small.svg" alt="Laybuy">
+        <a class="laybuy-link" onclick="document.getElementById('laybuy-popup-wrapper').style.display = 'block'">
+            <u class="laybuy-link-inner">what's this?</u>
+        </a>
+    </p>
+</div>
+
