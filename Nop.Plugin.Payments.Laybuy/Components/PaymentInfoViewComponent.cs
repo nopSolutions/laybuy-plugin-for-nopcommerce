@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Nop.Plugin.Payments.Laybuy.Services;
 using Nop.Web.Framework.Components;
 
 namespace Nop.Plugin.Payments.Laybuy.Components
@@ -9,6 +10,23 @@ namespace Nop.Plugin.Payments.Laybuy.Components
     [ViewComponent(Name = LaybuyDefaults.PAYMENT_INFO_VIEW_COMPONENT)]
     public class PaymentInfoViewComponent : NopViewComponent
     {
+        #region Fields
+
+        private readonly LaybuyManager _laybuyManager;
+
+        #endregion
+
+        #region Ctor
+
+        public PaymentInfoViewComponent(LaybuyManager laybuyManager)
+        {
+            _laybuyManager = laybuyManager;
+        }
+
+        #endregion
+
+        #region Methods
+
         /// <summary>
         /// Invoke view component
         /// </summary>
@@ -17,7 +35,10 @@ namespace Nop.Plugin.Payments.Laybuy.Components
         /// <returns>View component result</returns>
         public IViewComponentResult Invoke(string widgetZone, object additionalData)
         {
-            return View("~/Plugins/Payments.Laybuy/Views/PaymentInfo.cshtml");
+            var (_, initialPrice, price) = _laybuyManager.PreparePriceBreakdown();
+            return View("~/Plugins/Payments.Laybuy/Views/PaymentInfo.cshtml", (initialPrice, price));
         }
+
+        #endregion
     }
 }

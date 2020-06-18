@@ -2,11 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Nop.Core;
-using Nop.Core.Domain.Orders;
 using Nop.Plugin.Payments.Laybuy.Services;
-using Nop.Services.Catalog;
-using Nop.Services.Directory;
-using Nop.Services.Orders;
 using Nop.Services.Payments;
 using Nop.Web.Framework.Components;
 using Nop.Web.Framework.Infrastructure;
@@ -22,11 +18,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
     {
         #region Fields
 
-        private readonly ICurrencyService _currencyService;
-        private readonly IOrderTotalCalculationService _orderTotalCalculationService;
         private readonly IPaymentPluginManager _paymentPluginManager;
-        private readonly IPriceFormatter _priceFormatter;
-        private readonly IShoppingCartService _shoppingCartService;
         private readonly IStoreContext _storeContext;
         private readonly IWorkContext _workContext;
         private readonly LaybuyManager _laybuyManager;
@@ -36,21 +28,13 @@ namespace Nop.Plugin.Payments.Laybuy.Components
 
         #region Ctor
 
-        public PriceBreakdownViewComponent(ICurrencyService currencyService,
-            IOrderTotalCalculationService orderTotalCalculationService,
-            IPaymentPluginManager paymentPluginManager,
-            IPriceFormatter priceFormatter,
-            IShoppingCartService shoppingCartService,
+        public PriceBreakdownViewComponent(IPaymentPluginManager paymentPluginManager,
             IStoreContext storeContext,
             IWorkContext workContext,
             LaybuyManager laybuyManager,
             LaybuySettings laybuySettings)
         {
-            _currencyService = currencyService;
-            _orderTotalCalculationService = orderTotalCalculationService;
             _paymentPluginManager = paymentPluginManager;
-            _priceFormatter = priceFormatter;
-            _shoppingCartService = shoppingCartService;
             _storeContext = storeContext;
             _workContext = workContext;
             _laybuyManager = laybuyManager;
@@ -72,11 +56,9 @@ namespace Nop.Plugin.Payments.Laybuy.Components
             if (!_paymentPluginManager.IsPluginActive(LaybuyDefaults.SystemName, _workContext.CurrentCustomer, _storeContext.CurrentStore.Id))
                 return Content(string.Empty);
 
-            var (currencySupported, currencyCode) = _laybuyManager.PrimaryStoreCurrencySupported();
-            if (!currencySupported)
-                return Content(string.Empty);
-
-            var priceValue = decimal.Zero;
+            var result = false;
+            var initialPrice = string.Empty;
+            var price = string.Empty;
 
             //product details
             if (widgetZone.Equals(PublicWidgetZones.ProductDetailsBottom))
@@ -87,7 +69,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (!(additionalData is ProductDetailsModel model))
                     return Content(string.Empty);
 
-                priceValue = model.ProductPrice.PriceValue;
+                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown(model.ProductPrice.PriceValue);
             }
 
             //product box
@@ -99,7 +81,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (!(additionalData is ProductOverviewModel model))
                     return Content(string.Empty);
 
-                priceValue = model.ProductPrice.PriceValue;
+                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown(model.ProductPrice.PriceValue);
             }
 
             //shopping cart
@@ -112,41 +94,12 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (routeName != LaybuyDefaults.ShoppingCartRouteName)
                     return Content(string.Empty);
 
-                var cart = _shoppingCartService
-                    .GetShoppingCart(_workContext.CurrentCustomer, ShoppingCartType.ShoppingCart, _storeContext.CurrentStore.Id);
-                var cartTotal = _orderTotalCalculationService.GetShoppingCartTotal(cart);
-                priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(cartTotal ?? decimal.Zero, _workContext.WorkingCurrency);
+                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown();
             }
 
-            //whether to use Laybuy Boost price breakdown
-            var priceLimit = decimal.MaxValue;
-            var firstPrice = decimal.Zero;
-            if (currencyCode.Equals("AUD", System.StringComparison.InvariantCultureIgnoreCase) ||
-                currencyCode.Equals("NZD", System.StringComparison.InvariantCultureIgnoreCase))
-            {
-                priceLimit = 1440M;
-                firstPrice = 240M;
-            }
+            if (!result)
+                return Content(string.Empty);
 
-            if (currencyCode.Equals("GBP", System.StringComparison.InvariantCultureIgnoreCase))
-            {
-                priceLimit = 720M;
-                firstPrice = 120M;
-            }
-
-            var initialPrice = string.Empty;
-            var priceInPrimaryCurrency = _currencyService.ConvertToPrimaryStoreCurrency(priceValue, _workContext.WorkingCurrency);
-            if (priceInPrimaryCurrency > priceLimit)
-            {
-                var initialPriceValue = _currencyService
-                    .ConvertFromPrimaryStoreCurrency(firstPrice + (priceInPrimaryCurrency - priceLimit), _workContext.WorkingCurrency);
-                initialPrice = _priceFormatter.FormatPrice(initialPriceValue, true, false);
-                priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(firstPrice, _workContext.WorkingCurrency);
-            }
-            else
-                priceValue /= 6;
-
-            var price = _priceFormatter.FormatPrice(priceValue, true, false);
             return View("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/Script.cshtml", (widgetZone, initialPrice, price));
         }
 

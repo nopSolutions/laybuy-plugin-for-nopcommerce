@@ -1,3 +1,25 @@
-﻿<div>
+﻿@model (string InitialPrice, string Price)
+
+@{
+    Html.AddCssFileParts("~/Plugins/Payments.Laybuy/Content/styles.css", excludeFromBundle: true);
+}
+
+@if (!string.IsNullOrEmpty(Model.Price))
+{
+    <div class="laybuyInfo">
+        <p class="laybuy-paragraph">
+            @if (string.IsNullOrEmpty(Model.InitialPrice))
+            {
+                <span>Pay it in 6 weekly interest-free payments from <span class="laybuy-money">@Model.Price</span></span>
+            }
+            else
+            {
+                <span>Pay it from <span class="laybuy-money">@Model.InitialPrice</span> today & 5 weekly interest-free payments of <span class="laybuy-money">@Model.Price</span></span>
+            }
+        </p>
+    </div>
+}
+
+<div>
     <iframe src="https://popup.laybuy.com/" frameborder="0" scrolling="no" width="640" height="480"></iframe>
 </div>
