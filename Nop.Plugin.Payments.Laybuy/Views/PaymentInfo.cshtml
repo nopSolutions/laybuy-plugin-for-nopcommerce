@@ -1,34 +1,33 @@
 ﻿@model (string InitialPrice, string Price)
 
 <style>
-.laybuy-paragraph {
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  color: #000;
-  padding-bottom: 1em;
-}
+    .laybuy-paragraph {
+        display: -webkit-flex;
+        display: -ms-flexbox;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        color: #000;
+        padding-bottom: 1em;
+    }
 
-.laybuy-paragraph {
-justify-content: center;
-}
+    .laybuy-paragraph {
+        justify-content: center;
+    }
 
-.laybuy-paragraph > * {
-  margin-right: 0.25em;
-}
+    .laybuy-paragraph > * {
+        margin-right: 0.25em;
+    }
 
-.laybuy-paragraph span.laybuy-money {
-  font-size: 14px;
-  font-weight: 600 !important;
-  color: #000;
-}
+    .laybuy-paragraph span.laybuy-money {
+        font-size: 14px;
+        font-weight: 600 !important;
+        color: #000;
+    }
 
-#laybuy-iframe {
-    text-align: center
-}
-
+    #laybuy-iframe {
+        text-align: center
+    }
 </style>
 
 @if (!string.IsNullOrEmpty(Model.Price))

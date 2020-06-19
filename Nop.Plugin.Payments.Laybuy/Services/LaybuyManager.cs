@@ -249,12 +249,15 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// <returns>Result; Primary store currency code</returns>
         public (bool Result, string CurrencyCode) PrimaryStoreCurrencySupported()
         {
-            //New Zealand Dollars (NZD), Australian Dollars (AUD) and British Pound (GBP) are currently the only currencies supported
-            var supportedCurrencies = new List<string> { "AUD", "GBP", "NZD" };
-            var currencyCode = _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)?.CurrencyCode ?? string.Empty;
-            var result = supportedCurrencies.Contains(currencyCode, StringComparer.InvariantCultureIgnoreCase);
+            return HandleFunction(() =>
+            {
+                //New Zealand Dollars (NZD), Australian Dollars (AUD) and British Pound (GBP) are currently the only currencies supported
+                var supportedCurrencies = new List<string> { "AUD", "GBP", "NZD" };
+                var currencyCode = _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)?.CurrencyCode ?? string.Empty;
+                var result = supportedCurrencies.Contains(currencyCode, StringComparer.InvariantCultureIgnoreCase);
 
-            return (result, currencyCode);
+                return (result, currencyCode);
+            }).Result;
         }
 
         /// <summary>
@@ -264,57 +267,60 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// <returns>Result; Formatted first and regular prices</returns>
         public (bool Result, string InitialPrice, string Price) PreparePriceBreakdown(decimal? priceValue = null)
         {
-            //whether the store currency is supported
-            var (currencySupported, currencyCode) = PrimaryStoreCurrencySupported();
-            if (!currencySupported)
-                return (false, default, default);
-
-            //get price value
-            if (!priceValue.HasValue)
+            return HandleFunction(() =>
             {
-                var cart = _shoppingCartService
-                    .GetShoppingCart(_workContext.CurrentCustomer, ShoppingCartType.ShoppingCart, _storeContext.CurrentStore.Id);
-                if (cart.Any())
+                //whether the store currency is supported
+                var (currencySupported, currencyCode) = PrimaryStoreCurrencySupported();
+                if (!currencySupported)
+                    return (false, default, default);
+
+                //get price value
+                if (!priceValue.HasValue)
                 {
-                    var cartTotal = _orderTotalCalculationService.GetShoppingCartTotal(cart) ?? decimal.Zero;
-                    priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(cartTotal, _workContext.WorkingCurrency);
+                    var cart = _shoppingCartService
+                        .GetShoppingCart(_workContext.CurrentCustomer, ShoppingCartType.ShoppingCart, _storeContext.CurrentStore.Id);
+                    if (cart.Any())
+                    {
+                        var cartTotal = _orderTotalCalculationService.GetShoppingCartTotal(cart, usePaymentMethodAdditionalFee: false) ?? decimal.Zero;
+                        priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(cartTotal, _workContext.WorkingCurrency);
+                    }
                 }
-            }
 
-            if (!priceValue.HasValue || priceValue == decimal.Zero)
-                return (false, default, default);
+                if (!priceValue.HasValue || priceValue == decimal.Zero)
+                    return (false, default, default);
 
-            //whether to use Laybuy Boost price breakdown
-            var priceLimit = decimal.MaxValue;
-            var firstPrice = decimal.Zero;
-            if (currencyCode.Equals("AUD", StringComparison.InvariantCultureIgnoreCase) ||
-                currencyCode.Equals("NZD", StringComparison.InvariantCultureIgnoreCase))
-            {
-                priceLimit = 1440M;
-                firstPrice = 240M;
-            }
+                //whether to use Laybuy Boost price breakdown
+                var priceLimit = decimal.MaxValue;
+                var firstPrice = decimal.Zero;
+                if (currencyCode.Equals("AUD", StringComparison.InvariantCultureIgnoreCase) ||
+                    currencyCode.Equals("NZD", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    priceLimit = 1440M;
+                    firstPrice = 240M;
+                }
 
-            if (currencyCode.Equals("GBP", StringComparison.InvariantCultureIgnoreCase))
-            {
-                priceLimit = 720M;
-                firstPrice = 120M;
-            }
+                if (currencyCode.Equals("GBP", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    priceLimit = 720M;
+                    firstPrice = 120M;
+                }
 
-            //prepare prices
-            var initialPrice = string.Empty;
-            var priceInPrimaryCurrency = _currencyService.ConvertToPrimaryStoreCurrency(priceValue.Value, _workContext.WorkingCurrency);
-            if (priceInPrimaryCurrency > priceLimit)
-            {
-                var initialPriceValue = _currencyService
-                    .ConvertFromPrimaryStoreCurrency(firstPrice + (priceInPrimaryCurrency - priceLimit), _workContext.WorkingCurrency);
-                initialPrice = _priceFormatter.FormatPrice(initialPriceValue, true, false);
-                priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(firstPrice, _workContext.WorkingCurrency);
-            }
-            else
-                priceValue /= 6;
-            var price = priceValue > decimal.Zero ? _priceFormatter.FormatPrice(priceValue.Value, true, false) : string.Empty;
+                //prepare prices
+                var initialPrice = string.Empty;
+                var priceInPrimaryCurrency = _currencyService.ConvertToPrimaryStoreCurrency(priceValue.Value, _workContext.WorkingCurrency);
+                if (priceInPrimaryCurrency > priceLimit)
+                {
+                    var initialPriceValue = _currencyService
+                        .ConvertFromPrimaryStoreCurrency(firstPrice + (priceInPrimaryCurrency - priceLimit), _workContext.WorkingCurrency);
+                    initialPrice = _priceFormatter.FormatPrice(initialPriceValue, true, false);
+                    priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(firstPrice, _workContext.WorkingCurrency);
+                }
+                else
+                    priceValue /= 6;
+                var price = priceValue > decimal.Zero ? _priceFormatter.FormatPrice(priceValue.Value, true, false) : string.Empty;
 
-            return (true, initialPrice, price);
+                return (true, initialPrice, price);
+            }).Result;
         }
 
         /// <summary>

@@ -9,6 +9,8 @@ namespace Nop.Plugin.Payments.Laybuy.Models
     /// </summary>
     public class ConfigurationModel : BaseNopModel
     {
+        #region Properties
+
         [NopResourceDisplayName("Plugins.Payments.Laybuy.Fields.MerchantId")]
         public string MerchantId { get; set; }
 
@@ -28,5 +30,7 @@ namespace Nop.Plugin.Payments.Laybuy.Models
 
         [NopResourceDisplayName("Plugins.Payments.Laybuy.Fields.DisplayPriceBreakdownInShoppingCart")]
         public bool DisplayPriceBreakdownInShoppingCart { get; set; }
+
+        #endregion
     }
 }

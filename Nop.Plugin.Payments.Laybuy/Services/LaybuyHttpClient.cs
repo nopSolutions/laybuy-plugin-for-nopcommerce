@@ -27,7 +27,7 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         {
             //configure client
             httpClient.BaseAddress = new Uri(laybuySettings.UseSandbox ? LaybuyDefaults.SandboxServiceUrl : LaybuyDefaults.ServiceUrl);
-            httpClient.Timeout = TimeSpan.FromSeconds(20);
+            httpClient.Timeout = TimeSpan.FromSeconds(laybuySettings.RequestTimeout ?? 10);
             httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, LaybuyDefaults.UserAgent);
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, MimeTypes.ApplicationJson);
 

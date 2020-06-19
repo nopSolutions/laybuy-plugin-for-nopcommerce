@@ -275,7 +275,11 @@ namespace Nop.Plugin.Payments.Laybuy
             //settings
             _settingService.SaveSetting(new LaybuySettings
             {
-                UseSandbox = true
+                UseSandbox = true,
+                DisplayPriceBreakdownOnProductPage = true,
+                DisplayPriceBreakdownInProductBox = true,
+                DisplayPriceBreakdownInShoppingCart = true,
+                RequestTimeout = 10
             });
 
             if (!_widgetSettings.ActiveWidgetSystemNames.Contains(LaybuyDefaults.SystemName))

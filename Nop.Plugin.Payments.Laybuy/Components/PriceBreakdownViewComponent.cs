@@ -97,6 +97,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown();
             }
 
+            //whether to display price breakdown
             if (!result)
                 return Content(string.Empty);
 

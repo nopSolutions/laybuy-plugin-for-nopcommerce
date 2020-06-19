@@ -39,6 +39,11 @@ namespace Nop.Plugin.Payments.Laybuy
         /// </summary>
         public bool DisplayPriceBreakdownInShoppingCart { get; set; }
 
+        /// <summary>
+        /// Gets or sets a period (in seconds) before the request times out
+        /// </summary>
+        public int? RequestTimeout { get; set; }
+
         #endregion
     }
 }
