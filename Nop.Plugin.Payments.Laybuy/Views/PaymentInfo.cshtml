@@ -1,8 +1,35 @@
 ﻿@model (string InitialPrice, string Price)
 
-@{
-    Html.AddCssFileParts("~/Plugins/Payments.Laybuy/Content/styles.css", excludeFromBundle: true);
+<style>
+.laybuy-paragraph {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #000;
+  padding-bottom: 1em;
 }
+
+.laybuy-paragraph {
+justify-content: center;
+}
+
+.laybuy-paragraph > * {
+  margin-right: 0.25em;
+}
+
+.laybuy-paragraph span.laybuy-money {
+  font-size: 14px;
+  font-weight: 600 !important;
+  color: #000;
+}
+
+#laybuy-iframe {
+    text-align: center
+}
+
+</style>
 
 @if (!string.IsNullOrEmpty(Model.Price))
 {
@@ -20,6 +47,6 @@
     </div>
 }
 
-<div>
-    <iframe src="https://popup.laybuy.com/" frameborder="0" scrolling="no" width="640" height="480"></iframe>
+<div id="laybuy-iframe">
+    <iframe src="https://popup.laybuy.com/" frameborder="0" scrolling="no" width="620" height="480"></iframe>
 </div>
