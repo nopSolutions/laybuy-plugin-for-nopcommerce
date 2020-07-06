@@ -230,7 +230,7 @@ namespace Nop.Plugin.Payments.Laybuy
         /// <param name="viewComponentName">View component name</param>
         public string GetPublicViewComponentName()
         {
-            return LaybuyDefaults.PAYMENT_INFO_VIEW_COMPONENT;
+            return null;
         }
 
         /// <summary>
@@ -369,7 +369,7 @@ namespace Nop.Plugin.Payments.Laybuy
         /// <summary>
         /// Gets a value indicating whether we should display a payment information page for this plugin
         /// </summary>
-        public bool SkipPaymentInfo => false;
+        public bool SkipPaymentInfo => true;
 
         /// <summary>
         /// Gets a payment method description that will be displayed on checkout pages in the public store

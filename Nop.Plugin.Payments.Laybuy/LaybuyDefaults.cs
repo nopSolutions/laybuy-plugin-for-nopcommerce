@@ -63,11 +63,6 @@ namespace Nop.Plugin.Payments.Laybuy
         public static string OrderId => "LaybuyOrderId";
 
         /// <summary>
-        /// Gets a name of the view component to display payment info in public store
-        /// </summary>
-        public const string PAYMENT_INFO_VIEW_COMPONENT = "LaybuyPaymentInfoViewComponent";
-
-        /// <summary>
         /// Gets a name of the view component to display price breakdown
         /// </summary>
         public const string PRICE_BREAKDOWN_VIEW_COMPONENT = "LaybuyPriceBreakdownViewComponent";

@@ -354,13 +354,14 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                     TaxAmount = order.OrderTax
                 };
 
-                //set customer details
+                //set customer details 
+                //we need to pull this info from the actual checkout process (not from the account), so let's use billing address info
                 request.Customer = new CustomerDetails
                 {
-                    FirstName = _genericAttributeService.GetAttribute<string>(customer, NopCustomerDefaults.FirstNameAttribute),
-                    LastName = _genericAttributeService.GetAttribute<string>(customer, NopCustomerDefaults.LastNameAttribute),
-                    Email = customer.Email,
-                    Phone = _genericAttributeService.GetAttribute<string>(customer, NopCustomerDefaults.PhoneAttribute)
+                    FirstName = billingAddress.FirstName,
+                    LastName = billingAddress.LastName,
+                    Email = billingAddress.Email,
+                    Phone = billingAddress.PhoneNumber
                 };
 
                 //billing address details
