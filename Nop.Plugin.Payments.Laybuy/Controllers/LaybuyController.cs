@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Nop.Plugin.Payments.Laybuy.Models;
 using Nop.Plugin.Payments.Laybuy.Services;
 using Nop.Services.Configuration;
@@ -50,9 +51,9 @@ namespace Nop.Plugin.Payments.Laybuy.Controllers
 
         #region Methods
 
-        public IActionResult Configure()
+        public async Task<IActionResult> Configure()
         {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManagePaymentMethods))
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePaymentMethods))
                 return AccessDeniedView();
 
             var model = new ConfigurationModel
@@ -65,11 +66,12 @@ namespace Nop.Plugin.Payments.Laybuy.Controllers
                 DisplayPriceBreakdownInShoppingCart = _laybuySettings.DisplayPriceBreakdownInShoppingCart
             };
 
-            var (currencySupported, currencyCode) = _laybuyManager.PrimaryStoreCurrencySupported();
+            var (currencySupported, currencyCode) = await _laybuyManager.IsPrimaryStoreCurrencySupportedAsync();
             if (!currencySupported)
             {
                 var url = Url.Action("List", "Currency");
-                var warning = string.Format(_localizationService.GetResource("Plugins.Payments.Laybuy.Currency.Warning"), url, currencyCode);
+                var locale = await _localizationService.GetResourceAsync("Plugins.Payments.Laybuy.Currency.Warning");
+                var warning = string.Format(locale, url, currencyCode);
                 _notificationService.WarningNotification(warning, false);
             }
 
@@ -77,13 +79,13 @@ namespace Nop.Plugin.Payments.Laybuy.Controllers
         }
 
         [HttpPost]
-        public IActionResult Configure(ConfigurationModel model)
+        public async Task<IActionResult> Configure(ConfigurationModel model)
         {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManagePaymentMethods))
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePaymentMethods))
                 return AccessDeniedView();
 
             if (!ModelState.IsValid)
-                return Configure();
+                return await Configure();
 
             _laybuySettings.MerchantId = model.MerchantId;
             _laybuySettings.AuthenticationKey = model.AuthenticationKey;
@@ -91,11 +93,11 @@ namespace Nop.Plugin.Payments.Laybuy.Controllers
             _laybuySettings.DisplayPriceBreakdownOnProductPage = model.DisplayPriceBreakdownOnProductPage;
             _laybuySettings.DisplayPriceBreakdownInProductBox = model.DisplayPriceBreakdownInProductBox;
             _laybuySettings.DisplayPriceBreakdownInShoppingCart = model.DisplayPriceBreakdownInShoppingCart;
-            _settingService.SaveSetting(_laybuySettings);
+            await _settingService.SaveSettingAsync(_laybuySettings);
 
-            _notificationService.SuccessNotification(_localizationService.GetResource("Admin.Plugins.Saved"));
+            _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Plugins.Saved"));
 
-            return Configure();
+            return await Configure();
         }
 
         #endregion

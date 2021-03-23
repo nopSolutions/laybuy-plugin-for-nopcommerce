@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Nop.Core;
@@ -50,10 +51,12 @@ namespace Nop.Plugin.Payments.Laybuy.Components
         /// </summary>
         /// <param name="widgetZone">Widget zone name</param>
         /// <param name="additionalData">Additional data</param>
-        /// <returns>View component result</returns>
-        public IViewComponentResult Invoke(string widgetZone, object additionalData)
+        /// <returns>A task that represents the asynchronous operation whose result contains the view component result</returns>
+        public async Task<IViewComponentResult> InvokeAsync(string widgetZone, object additionalData)
         {
-            if (!_paymentPluginManager.IsPluginActive(LaybuyDefaults.SystemName, _workContext.CurrentCustomer, _storeContext.CurrentStore.Id))
+            var customer = await _workContext.GetCurrentCustomerAsync();
+            var store = await _storeContext.GetCurrentStoreAsync();
+            if (!await _paymentPluginManager.IsPluginActiveAsync(LaybuyDefaults.SystemName, customer, store.Id))
                 return Content(string.Empty);
 
             var result = false;
@@ -66,10 +69,10 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (!_laybuySettings.DisplayPriceBreakdownOnProductPage)
                     return Content(string.Empty);
 
-                if (!(additionalData is ProductDetailsModel model))
+                if (additionalData is not ProductDetailsModel model)
                     return Content(string.Empty);
 
-                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown(model.ProductPrice.PriceValue);
+                (result, initialPrice, price) = await _laybuyManager.PreparePriceBreakdownAsync(model.ProductPrice.PriceValue);
             }
 
             //product box
@@ -78,10 +81,10 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (!_laybuySettings.DisplayPriceBreakdownInProductBox)
                     return Content(string.Empty);
 
-                if (!(additionalData is ProductOverviewModel model))
+                if (additionalData is not ProductOverviewModel model)
                     return Content(string.Empty);
 
-                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown(model.ProductPrice.PriceValue);
+                (result, initialPrice, price) = await _laybuyManager.PreparePriceBreakdownAsync(model.ProductPrice.PriceValue);
             }
 
             //shopping cart
@@ -94,7 +97,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
                 if (routeName != LaybuyDefaults.ShoppingCartRouteName)
                     return Content(string.Empty);
 
-                (result, initialPrice, price) = _laybuyManager.PreparePriceBreakdown();
+                (result, initialPrice, price) = await _laybuyManager.PreparePriceBreakdownAsync();
             }
 
             //whether to display price breakdown

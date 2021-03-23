@@ -7,7 +7,7 @@ namespace Nop.Plugin.Payments.Laybuy.Models
     /// <summary>
     /// Represents configuration model
     /// </summary>
-    public class ConfigurationModel : BaseNopModel
+    public record ConfigurationModel : BaseNopModel
     {
         #region Properties
 
@@ -16,7 +16,6 @@ namespace Nop.Plugin.Payments.Laybuy.Models
 
         [NopResourceDisplayName("Plugins.Payments.Laybuy.Fields.AuthenticationKey")]
         [DataType(DataType.Password)]
-        [NoTrim]
         public string AuthenticationKey { get; set; }
 
         [NopResourceDisplayName("Plugins.Payments.Laybuy.Fields.UseSandbox")]

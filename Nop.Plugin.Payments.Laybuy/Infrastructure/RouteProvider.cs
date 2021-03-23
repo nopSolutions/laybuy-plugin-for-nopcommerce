@@ -16,10 +16,12 @@ namespace Nop.Plugin.Payments.Laybuy.Infrastructure
         /// <param name="endpointRouteBuilder">Route builder</param>
         public void RegisterRoutes(IEndpointRouteBuilder endpointRouteBuilder)
         {
-            endpointRouteBuilder.MapControllerRoute(LaybuyDefaults.ConfigurationRouteName, "Plugins/Laybuy/Configure",
+            endpointRouteBuilder.MapControllerRoute(LaybuyDefaults.ConfigurationRouteName,
+                "Plugins/Laybuy/Configure",
                 new { controller = "Laybuy", action = "Configure", area = AreaNames.Admin });
 
-            endpointRouteBuilder.MapControllerRoute(LaybuyDefaults.IpnHandlerRouteName, "Plugins/Laybuy/IPN/{orderId:min(0)}",
+            endpointRouteBuilder.MapControllerRoute(LaybuyDefaults.IpnHandlerRouteName,
+                "Plugins/Laybuy/IPN/{orderId:min(0)}",
                 new { controller = "LaybuyIpn", action = "IpnHandler" });
         }
 

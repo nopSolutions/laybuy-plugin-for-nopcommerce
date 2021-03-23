@@ -16,12 +16,12 @@ namespace Nop.Plugin.Payments.Laybuy.Validators
         {
             RuleFor(model => model.MerchantId)
                 .NotEmpty()
-                .WithMessage(localizationService.GetResource("Plugins.Payments.Laybuy.Fields.MerchantId.Required"))
+                .WithMessageAwait(localizationService.GetResourceAsync("Plugins.Payments.Laybuy.Fields.MerchantId.Required"))
                 .When(model => !model.UseSandbox);
 
             RuleFor(model => model.AuthenticationKey)
                 .NotEmpty()
-                .WithMessage(localizationService.GetResource("Plugins.Payments.Laybuy.Fields.AuthenticationKey.Required"))
+                .WithMessageAwait(localizationService.GetResourceAsync("Plugins.Payments.Laybuy.Fields.AuthenticationKey.Required"))
                 .When(model => !model.UseSandbox);
         }
 

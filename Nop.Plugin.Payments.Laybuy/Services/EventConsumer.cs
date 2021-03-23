@@ -1,4 +1,5 @@
-﻿using Nop.Services.Events;
+﻿using System.Threading.Tasks;
+using Nop.Services.Events;
 using Nop.Services.Payments;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Areas.Admin.Models.Orders;
@@ -39,18 +40,19 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// Handle product details model prepared event
         /// </summary>
         /// <param name="eventMessage">Event message</param>
-        public void HandleEvent(ModelPreparedEvent<BaseNopModel> eventMessage)
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public async Task HandleEventAsync(ModelPreparedEvent<BaseNopModel> eventMessage)
         {
-            if (!(eventMessage?.Model is OrderModel model))
+            if (eventMessage?.Model is not OrderModel model)
                 return;
 
-            if (!_paymentPluginManager.IsPluginActive(LaybuyDefaults.SystemName))
+            if (!await _paymentPluginManager.IsPluginActiveAsync(LaybuyDefaults.SystemName))
                 return;
 
             //clarify refunded amount
-            var (order, errorMessage) = _laybuyManager.CheckRefunds(model.Id);
+            var (order, errorMessage) = await _laybuyManager.CheckRefundsAsync(model.Id);
             if (order != null && string.IsNullOrEmpty(errorMessage))
-                _orderModelFactory.PrepareOrderModel(model, order);
+                await _orderModelFactory.PrepareOrderModelAsync(model, order);
         }
 
         #endregion

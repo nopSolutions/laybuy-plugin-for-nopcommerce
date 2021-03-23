@@ -63,7 +63,14 @@ namespace Nop.Plugin.Payments.Laybuy.Services
 
                 //return result
                 var responseString = await httpResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<TResponse>(responseString);
+                try
+                {
+                    return JsonConvert.DeserializeObject<TResponse>(responseString);
+                }
+                catch (Exception exc)
+                {
+                    throw new NopException($"Could not recognize response - '{responseString}'", exc);
+                }
             }
             catch (AggregateException exception)
             {

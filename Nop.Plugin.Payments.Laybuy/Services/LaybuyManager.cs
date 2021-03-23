@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Nop.Core;
-using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Orders;
 using Nop.Plugin.Payments.Laybuy.Domain;
@@ -105,7 +105,8 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         private bool IsConfigured()
         {
             //Merchant ID and Authentication Key are required to request services
-            return !string.IsNullOrEmpty(_laybuySettings.MerchantId) && !string.IsNullOrEmpty(_laybuySettings.AuthenticationKey);
+            return _laybuySettings.UseSandbox ||
+                !string.IsNullOrEmpty(_laybuySettings.MerchantId) && !string.IsNullOrEmpty(_laybuySettings.AuthenticationKey);
         }
 
         /// <summary>
@@ -113,8 +114,8 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// </summary>
         /// <typeparam name="TResult">Result type</typeparam>
         /// <param name="function">Function</param>
-        /// <returns>Result; error message if exists</returns>
-        private (TResult Result, string ErrorMessage) HandleFunction<TResult>(Func<TResult> function)
+        /// <returns>A task that represents the asynchronous operation whose result contains the function result; error message if exists</returns>
+        private async Task<(TResult Result, string ErrorMessage)> HandleFunctionAsync<TResult>(Func<Task<TResult>> function)
         {
             try
             {
@@ -123,13 +124,14 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                     throw new NopException("Plugin not configured");
 
                 //invoke function
-                return (function(), default);
+                return (await function(), default);
             }
             catch (Exception exception)
             {
                 //log errors
+                var customer = await _workContext.GetCurrentCustomerAsync();
                 var errorMessage = $"{LaybuyDefaults.SystemName} error: {Environment.NewLine}{exception.Message}";
-                _logger.Error(errorMessage, exception, _workContext.CurrentCustomer);
+                await _logger.ErrorAsync(errorMessage, exception, customer);
 
                 return (default, errorMessage);
             }
@@ -141,11 +143,12 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// <typeparam name="TRequest">Request type</typeparam>
         /// <typeparam name="TResponse">Response type</typeparam>
         /// <param name="request">Request</param>
-        /// <returns>Response</returns>
-        private TResponse HandleRequest<TRequest, TResponse>(TRequest request) where TRequest : Request where TResponse : Response
+        /// <returns>A task that represents the asynchronous operation whose result contains the response</returns>
+        private async Task<TResponse> HandleRequestAsync<TRequest, TResponse>(TRequest request)
+            where TRequest : Request where TResponse : Response
         {
             //execute request
-            var response = _httpClient.RequestAsync<TRequest, TResponse>(request)?.Result
+            var response = await _httpClient.RequestAsync<TRequest, TResponse>(request)
                 ?? throw new NopException("No response from service");
 
             //ensure that request was successfull
@@ -159,33 +162,36 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// Prepare order items
         /// </summary>
         /// <param name="order">Order</param>
-        /// <returns>Item details</returns>
-        private List<ItemDetails> PrepareOrderItems(Order order)
+        /// <returns>A task that represents the asynchronous operation whose result contains the item details</returns>
+        private async Task<List<ItemDetails>> PrepareOrderItemsAsync(Order order)
         {
             var items = new List<ItemDetails>();
 
             //add purchased items
-            items.AddRange(_orderService.GetOrderItems(order.Id).Select(item =>
+            var orderItems = await _orderService.GetOrderItemsAsync(order.Id);
+            foreach (var item in orderItems)
             {
-                var product = _productService.GetProductById(item.ProductId);
-                var sku = product != null ? _productService.FormatSku(product, item.AttributesXml) : null;
-                return new ItemDetails
+                var product = await _productService.GetProductByIdAsync(item.ProductId);
+                var sku = product != null
+                    ? await _productService.FormatSkuAsync(product, item.AttributesXml)
+                    : string.Empty;
+                items.Add(new ItemDetails
                 {
                     ItemId = !string.IsNullOrEmpty(sku) ? sku : product?.Id.ToString(),
                     Description = product?.Name,
                     Price = item.UnitPriceExclTax,
                     Quantity = item.Quantity
-                };
-            }));
+                });
+            }
 
             //add checkout attributes as order items
-            var customer = _customerService.GetCustomerById(order.CustomerId);
+            var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId);
             var checkoutAttributeValues = _checkoutAttributeParser.ParseCheckoutAttributeValues(order.CheckoutAttributesXml);
-            foreach (var (attribute, values) in checkoutAttributeValues)
+            await foreach (var (attribute, values) in checkoutAttributeValues)
             {
-                foreach (var attributeValue in values)
+                await foreach (var attributeValue in values)
                 {
-                    var price = _taxService.GetCheckoutAttributePrice(attribute, attributeValue, false, customer);
+                    var (price, _) = await _taxService.GetCheckoutAttributePriceAsync(attribute, attributeValue, false, customer);
                     if (price <= decimal.Zero)
                         continue;
 
@@ -246,43 +252,55 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// <summary>
         /// Check whether the primary store currency is supported by payment gateway
         /// </summary>
-        /// <returns>Result; Primary store currency code</returns>
-        public (bool Result, string CurrencyCode) PrimaryStoreCurrencySupported()
+        /// <returns>A task that represents the asynchronous operation whose result contains the check result; primary store currency code</returns>
+        public async Task<(bool Result, string CurrencyCode)> IsPrimaryStoreCurrencySupportedAsync()
         {
-            return HandleFunction(() =>
+            var (result, _) = await HandleFunctionAsync(async () =>
             {
                 //New Zealand Dollars (NZD), Australian Dollars (AUD) and British Pound (GBP) are currently the only currencies supported
                 var supportedCurrencies = new List<string> { "AUD", "GBP", "NZD" };
-                var currencyCode = _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)?.CurrencyCode ?? string.Empty;
+                var currency = await _currencyService.GetCurrencyByIdAsync(_currencySettings.PrimaryStoreCurrencyId);
+                var currencyCode = currency?.CurrencyCode ?? string.Empty;
                 var result = supportedCurrencies.Contains(currencyCode, StringComparer.InvariantCultureIgnoreCase);
 
                 return (result, currencyCode);
-            }).Result;
+            });
+
+            return result;
         }
 
         /// <summary>
         /// Prepare price breakdown
         /// </summary>
         /// <param name="priceValue">Price value</param>
-        /// <returns>Result; Formatted first and regular prices</returns>
-        public (bool Result, string InitialPrice, string Price) PreparePriceBreakdown(decimal? priceValue = null)
+        /// <returns>A task that represents the asynchronous operation whose result contains the check result; formatted first and regular prices</returns>
+        public async Task<(bool Result, string InitialPrice, string Price)> PreparePriceBreakdownAsync(decimal? priceValue = null)
         {
-            return HandleFunction(() =>
+            var (result, _) = await HandleFunctionAsync(async () =>
             {
                 //whether the store currency is supported
-                var (currencySupported, currencyCode) = PrimaryStoreCurrencySupported();
+                var (currencySupported, currencyCode) = await IsPrimaryStoreCurrencySupportedAsync();
                 if (!currencySupported)
                     return (false, default, default);
+
+                var customer = await _workContext.GetCurrentCustomerAsync();
+                var store = await _storeContext.GetCurrentStoreAsync();
+                var currency = await _workContext.GetWorkingCurrencyAsync();
 
                 //get price value
                 if (!priceValue.HasValue)
                 {
-                    var cart = _shoppingCartService
-                        .GetShoppingCart(_workContext.CurrentCustomer, ShoppingCartType.ShoppingCart, _storeContext.CurrentStore.Id);
+                    var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
                     if (cart.Any())
                     {
-                        var cartTotal = _orderTotalCalculationService.GetShoppingCartTotal(cart, usePaymentMethodAdditionalFee: false) ?? decimal.Zero;
-                        priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(cartTotal, _workContext.WorkingCurrency);
+                        var (cartTotal, _, _, _, _, _) = await _orderTotalCalculationService
+                            .GetShoppingCartTotalAsync(cart, usePaymentMethodAdditionalFee: false);
+                        if (!cartTotal.HasValue)
+                        {
+                            var (_, _, _, subTotal, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, true);
+                            cartTotal = subTotal;
+                        }
+                        priceValue = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(cartTotal ?? decimal.Zero, currency);
                     }
                 }
 
@@ -307,20 +325,24 @@ namespace Nop.Plugin.Payments.Laybuy.Services
 
                 //prepare prices
                 var initialPrice = string.Empty;
-                var priceInPrimaryCurrency = _currencyService.ConvertToPrimaryStoreCurrency(priceValue.Value, _workContext.WorkingCurrency);
+                var priceInPrimaryCurrency = await _currencyService.ConvertToPrimaryStoreCurrencyAsync(priceValue.Value, currency);
                 if (priceInPrimaryCurrency > priceLimit)
                 {
-                    var initialPriceValue = _currencyService
-                        .ConvertFromPrimaryStoreCurrency(firstPrice + (priceInPrimaryCurrency - priceLimit), _workContext.WorkingCurrency);
-                    initialPrice = _priceFormatter.FormatPrice(initialPriceValue, true, false);
-                    priceValue = _currencyService.ConvertFromPrimaryStoreCurrency(firstPrice, _workContext.WorkingCurrency);
+                    var initialPriceValue = await _currencyService
+                        .ConvertFromPrimaryStoreCurrencyAsync(firstPrice + (priceInPrimaryCurrency - priceLimit), currency);
+                    initialPrice = await _priceFormatter.FormatPriceAsync(initialPriceValue, true, false);
+                    priceValue = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(firstPrice, currency);
                 }
                 else
                     priceValue /= 6;
-                var price = priceValue > decimal.Zero ? _priceFormatter.FormatPrice(priceValue.Value, true, false) : string.Empty;
+                var price = priceValue > decimal.Zero
+                    ? await _priceFormatter.FormatPriceAsync(priceValue.Value, true, false)
+                    : string.Empty;
 
                 return (true, initialPrice, price);
-            }).Result;
+            });
+
+            return result;
         }
 
         /// <summary>
@@ -328,27 +350,26 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// </summary>
         /// <param name="order">Order</param>
         /// <param name="returnUrl">URL to redirect the customer to once the payment process is completed</param>
-        /// <returns>Response; error message if exists</returns>
-        public (CreateResponse Response, string ErrorMessage) CreateOrder(Order order, string returnUrl)
+        /// <returns>A task that represents the asynchronous operation whose result contains the response; error message if exists</returns>
+        public async Task<(CreateResponse Response, string ErrorMessage)> CreateOrderAsync(Order order, string returnUrl)
         {
-            return HandleFunction(() =>
+            return await HandleFunctionAsync(async () =>
             {
                 if (order == null)
                     throw new NopException("Order cannot be loaded");
 
-                var customer = _customerService.GetCustomerById(order.CustomerId);
-                if (customer == null)
-                    throw new NopException("Customer cannot be loaded");
+                var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId)
+                    ?? throw new NopException("Customer cannot be loaded");
 
-                var billingAddress = _addressService.GetAddressById(order.BillingAddressId);
-                if (billingAddress == null)
-                    throw new NopException("Billing address cannot be loaded");
+                var billingAddress = await _addressService.GetAddressByIdAsync(order.BillingAddressId)
+                    ?? throw new NopException("Billing address cannot be loaded");
 
                 //prepare request to create new order
+                var (_, currencyCode) = await IsPrimaryStoreCurrencySupportedAsync();
                 var request = new CreateRequest
                 {
                     TotalAmount = order.OrderTotal,
-                    Currency = PrimaryStoreCurrencySupported().CurrencyCode,
+                    Currency = currencyCode,
                     ReturnUrl = returnUrl,
                     MerchantReference = order.CustomOrderNumber,
                     TaxAmount = order.OrderTax
@@ -365,6 +386,8 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                 };
 
                 //billing address details
+                var country = await _countryService.GetCountryByIdAsync(billingAddress.CountryId ?? 0);
+                var state = await _stateProvinceService.GetStateProvinceByIdAsync(billingAddress.StateProvinceId ?? 0);
                 request.BillingAddress = new AddressDetails
                 {
                     Name = $"{billingAddress.FirstName} {billingAddress.LastName}",
@@ -373,15 +396,17 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                     AddressLine2 = billingAddress.Address2,
                     City = billingAddress.City,
                     Suburb = billingAddress.County,
-                    State = _stateProvinceService.GetStateProvinceById(billingAddress.StateProvinceId ?? 0)?.Name,
+                    State = state?.Name,
                     PostalCode = billingAddress.ZipPostalCode,
-                    Country = _countryService.GetCountryById(billingAddress.CountryId ?? 0)?.Name
+                    Country = country?.Name
                 };
 
                 //shipping address details
-                var shippingAddress = _addressService.GetAddressById(order.PickupAddressId ?? order.ShippingAddressId ?? 0);
+                var shippingAddress = await _addressService.GetAddressByIdAsync(order.PickupAddressId ?? order.ShippingAddressId ?? 0);
                 if (shippingAddress != null)
                 {
+                    var shippingCountry = await _countryService.GetCountryByIdAsync(shippingAddress.CountryId ?? 0);
+                    var shippingState = await _stateProvinceService.GetStateProvinceByIdAsync(shippingAddress.StateProvinceId ?? 0);
                     request.ShippingAddress = new AddressDetails
                     {
                         Name = $"{shippingAddress.FirstName} {shippingAddress.LastName}",
@@ -390,16 +415,16 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                         AddressLine2 = shippingAddress.Address2,
                         City = shippingAddress.City,
                         Suburb = shippingAddress.County,
-                        State = _stateProvinceService.GetStateProvinceById(shippingAddress.StateProvinceId ?? 0)?.Name,
+                        State = shippingState?.Name,
                         PostalCode = shippingAddress.ZipPostalCode,
-                        Country = _countryService.GetCountryById(shippingAddress.CountryId ?? 0)?.Name
+                        Country = shippingCountry?.Name
                     };
                 }
 
                 //purchased items details
-                request.Items = PrepareOrderItems(order);
+                request.Items = await PrepareOrderItemsAsync(order);
 
-                return HandleRequest<CreateRequest, CreateResponse>(request);
+                return await HandleRequestAsync<CreateRequest, CreateResponse>(request);
             });
         }
 
@@ -408,17 +433,19 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// </summary>
         /// <param name="order">Order</param>
         /// <param name="amount">Amount to refund</param>
-        /// <returns>Response; error message if exists</returns>
-        public (RefundResponse Response, string ErrorMessage) RefundOrder(Order order, decimal amount)
+        /// <returns>A task that represents the asynchronous operation whose result contains the response; error message if exists</returns>
+        public async Task<(RefundResponse Response, string ErrorMessage)> RefundOrderAsync(Order order, decimal amount)
         {
-            return HandleFunction(() =>
+            return await HandleFunctionAsync(async () =>
             {
+                var orderId = await _genericAttributeService.GetAttributeAsync<int?>(order, LaybuyDefaults.OrderId);
                 var request = new RefundRequest
                 {
-                    OrderId = _genericAttributeService.GetAttribute<int?>(order, LaybuyDefaults.OrderId),
+                    OrderId = orderId,
                     Amount = amount
                 };
-                return HandleRequest<RefundRequest, RefundResponse>(request);
+
+                return await HandleRequestAsync<RefundRequest, RefundResponse>(request);
             });
         }
 
@@ -426,13 +453,13 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// Confirm order
         /// </summary>
         /// <param name="orderId">Order identifier</param>
-        /// <returns>Result; error message if exists</returns>
-        public (bool Result, string ErrorMessage) ConfirmOrder(int orderId)
+        /// <returns>A task that represents the asynchronous operation whose result contains the check result; error message if exists</returns>
+        public async Task<(bool Result, string ErrorMessage)> ConfirmOrderAsync(int orderId)
         {
-            return HandleFunction(() =>
+            return await HandleFunctionAsync(async () =>
             {
                 //try to get an order for transaction
-                var order = _orderService.GetOrderById(orderId)
+                var order = await _orderService.GetOrderByIdAsync(orderId)
                     ?? throw new NopException("Order cannot be loaded");
 
                 //check the status
@@ -441,28 +468,30 @@ namespace Nop.Plugin.Payments.Laybuy.Services
                     throw new NopException($"Order is {statusValue}");
 
                 //validate received transaction
-                var orderToken = _genericAttributeService.GetAttribute<string>(order, LaybuyDefaults.OrderToken) ?? string.Empty;
+                var orderToken = await _genericAttributeService.GetAttributeAsync<string>(order, LaybuyDefaults.OrderToken) ?? string.Empty;
                 var tokenValue = _webHelper.QueryString<string>("token");
                 if (!orderToken.Equals(tokenValue, StringComparison.InvariantCultureIgnoreCase))
                     throw new NopException($"Received order token ({tokenValue}) does not match stored ({orderToken})");
 
                 //order validated, try to confirm
+                var (_, currencyCode) = await IsPrimaryStoreCurrencySupportedAsync();
+                var items = await PrepareOrderItemsAsync(order);
                 var request = new ConfirmRequest
                 {
                     Token = orderToken,
-                    Currency = PrimaryStoreCurrencySupported().CurrencyCode,
+                    Currency = currencyCode,
                     TotalAmount = order.OrderTotal,
-                    Items = PrepareOrderItems(order)
+                    Items = items
                 };
-                var response = HandleRequest<ConfirmRequest, ConfirmResponse>(request);
+                var response = await HandleRequestAsync<ConfirmRequest, ConfirmResponse>(request);
                 if (response?.OrderId == null)
                     throw new NopException($"Order identifier not set");
 
                 //order successfully confirmed, mark it as paid
-                _genericAttributeService.SaveAttribute<string>(order, LaybuyDefaults.OrderToken, null);
-                _genericAttributeService.SaveAttribute(order, LaybuyDefaults.OrderId, response.OrderId.Value);
+                await _genericAttributeService.SaveAttributeAsync<string>(order, LaybuyDefaults.OrderToken, null);
+                await _genericAttributeService.SaveAttributeAsync(order, LaybuyDefaults.OrderId, response.OrderId.Value);
                 if (_orderProcessingService.CanMarkOrderAsPaid(order))
-                    _orderProcessingService.MarkOrderAsPaid(order);
+                    await _orderProcessingService.MarkOrderAsPaidAsync(order);
 
                 return true;
             });
@@ -472,19 +501,19 @@ namespace Nop.Plugin.Payments.Laybuy.Services
         /// Check order refunded amount
         /// </summary>
         /// <param name="orderId">Order identifier</param>
-        /// <returns>Order; error message if exists</returns>
-        public (Order order, string ErrorMessage) CheckRefunds(int orderId)
+        /// <returns>A task that represents the asynchronous operation whose result contains the order; error message if exists</returns>
+        public async Task<(Order order, string ErrorMessage)> CheckRefundsAsync(int orderId)
         {
-            return HandleFunction(() =>
+            return await HandleFunctionAsync(async () =>
             {
-                var order = _orderService.GetOrderById(orderId)
+                var order = await _orderService.GetOrderByIdAsync(orderId)
                     ?? throw new NopException("Order cannot be loaded");
 
                 var request = new GetRequest
                 {
                     MerchantReference = order.CustomOrderNumber
                 };
-                var response = HandleRequest<GetRequest, GetResponse>(request);
+                var response = await HandleRequestAsync<GetRequest, GetResponse>(request);
 
                 //check refunds
                 var refundedAmount = response.Refunds?.Sum(refund => refund.Amount);
@@ -493,7 +522,8 @@ namespace Nop.Plugin.Payments.Laybuy.Services
 
                 //clarify refunded amount
                 order.RefundedAmount = refundedAmount.Value;
-                _orderService.UpdateOrder(order);
+                await _orderService.UpdateOrderAsync(order);
+
                 return order;
             });
         }

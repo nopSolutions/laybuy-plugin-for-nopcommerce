@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -70,17 +71,21 @@ namespace Nop.Plugin.Payments.Laybuy
         /// Process a payment
         /// </summary>
         /// <param name="processPaymentRequest">Payment info required for an order processing</param>
-        /// <returns>Process payment result</returns>
-        public ProcessPaymentResult ProcessPayment(ProcessPaymentRequest processPaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the process payment result
+        /// </returns>
+        public Task<ProcessPaymentResult> ProcessPaymentAsync(ProcessPaymentRequest processPaymentRequest)
         {
-            return new ProcessPaymentResult();
+            return Task.FromResult(new ProcessPaymentResult());
         }
 
         /// <summary>
         /// Post process payment (used by payment gateways that require redirecting to a third-party URL)
         /// </summary>
         /// <param name="postProcessPaymentRequest">Payment info required for an order processing</param>
-        public void PostProcessPayment(PostProcessPaymentRequest postProcessPaymentRequest)
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public async Task PostProcessPaymentAsync(PostProcessPaymentRequest postProcessPaymentRequest)
         {
             if (postProcessPaymentRequest == null)
                 throw new ArgumentNullException(nameof(postProcessPaymentRequest));
@@ -88,16 +93,16 @@ namespace Nop.Plugin.Payments.Laybuy
             //prepare URLs
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var successUrl = urlHelper.RouteUrl(LaybuyDefaults.IpnHandlerRouteName,
-                new { orderId = postProcessPaymentRequest.Order.Id }, _webHelper.CurrentRequestProtocol);
+                new { orderId = postProcessPaymentRequest.Order.Id }, _webHelper.GetCurrentRequestProtocol());
             var failUrl = urlHelper.RouteUrl(LaybuyDefaults.OrderDetailsRouteName,
-                new { orderId = postProcessPaymentRequest.Order.Id }, _webHelper.CurrentRequestProtocol);
+                new { orderId = postProcessPaymentRequest.Order.Id }, _webHelper.GetCurrentRequestProtocol());
 
             //try to create order
-            var (response, errorMessage) = _laybuyManager.CreateOrder(postProcessPaymentRequest.Order, successUrl);
+            var (response, errorMessage) = await _laybuyManager.CreateOrderAsync(postProcessPaymentRequest.Order, successUrl);
             if (!string.IsNullOrEmpty(response?.PaymentUrl) && string.IsNullOrEmpty(errorMessage))
             {
                 //redirect to payment link on success
-                _genericAttributeService.SaveAttribute(postProcessPaymentRequest.Order, LaybuyDefaults.OrderToken, response.Token);
+                await _genericAttributeService.SaveAttributeAsync(postProcessPaymentRequest.Order, LaybuyDefaults.OrderToken, response.Token);
                 _actionContextAccessor.ActionContext.HttpContext.Response.Redirect(response.PaymentUrl);
                 return;
             }
@@ -111,21 +116,27 @@ namespace Nop.Plugin.Payments.Laybuy
         /// Captures payment
         /// </summary>
         /// <param name="capturePaymentRequest">Capture payment request</param>
-        /// <returns>Capture payment result</returns>
-        public CapturePaymentResult Capture(CapturePaymentRequest capturePaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the capture payment result
+        /// </returns>
+        public Task<CapturePaymentResult> CaptureAsync(CapturePaymentRequest capturePaymentRequest)
         {
-            return new CapturePaymentResult { Errors = new[] { "Capture method not supported" } };
+            return Task.FromResult(new CapturePaymentResult { Errors = new[] { "Capture method not supported" } });
         }
 
         /// <summary>
         /// Refunds a payment
         /// </summary>
         /// <param name="refundPaymentRequest">Request</param>
-        /// <returns>Result</returns>
-        public RefundPaymentResult Refund(RefundPaymentRequest refundPaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public async Task<RefundPaymentResult> RefundAsync(RefundPaymentRequest refundPaymentRequest)
         {
             //try to refund order
-            var (_, errorMessage) = _laybuyManager.RefundOrder(refundPaymentRequest.Order, refundPaymentRequest.AmountToRefund);
+            var (_, errorMessage) = await _laybuyManager.RefundOrderAsync(refundPaymentRequest.Order, refundPaymentRequest.AmountToRefund);
             if (!string.IsNullOrEmpty(errorMessage))
                 return new RefundPaymentResult { Errors = new[] { errorMessage } };
 
@@ -140,80 +151,107 @@ namespace Nop.Plugin.Payments.Laybuy
         /// Voids a payment
         /// </summary>
         /// <param name="voidPaymentRequest">Request</param>
-        /// <returns>Result</returns>
-        public VoidPaymentResult Void(VoidPaymentRequest voidPaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public Task<VoidPaymentResult> VoidAsync(VoidPaymentRequest voidPaymentRequest)
         {
-            return new VoidPaymentResult { Errors = new[] { "Void method not supported" } };
+            return Task.FromResult(new VoidPaymentResult { Errors = new[] { "Void method not supported" } });
         }
 
         /// <summary>
         /// Process recurring payment
         /// </summary>
         /// <param name="processPaymentRequest">Payment info required for an order processing</param>
-        /// <returns>Process payment result</returns>
-        public ProcessPaymentResult ProcessRecurringPayment(ProcessPaymentRequest processPaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the process payment result
+        /// </returns>
+        public Task<ProcessPaymentResult> ProcessRecurringPaymentAsync(ProcessPaymentRequest processPaymentRequest)
         {
-            return new ProcessPaymentResult { Errors = new[] { "Recurring payment not supported" } };
+            return Task.FromResult(new ProcessPaymentResult { Errors = new[] { "Recurring payment not supported" } });
         }
 
         /// <summary>
         /// Cancels a recurring payment
         /// </summary>
         /// <param name="cancelPaymentRequest">Request</param>
-        /// <returns>Result</returns>
-        public CancelRecurringPaymentResult CancelRecurringPayment(CancelRecurringPaymentRequest cancelPaymentRequest)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public Task<CancelRecurringPaymentResult> CancelRecurringPaymentAsync(CancelRecurringPaymentRequest cancelPaymentRequest)
         {
-            return new CancelRecurringPaymentResult { Errors = new[] { "Recurring payment not supported" } };
+            return Task.FromResult(new CancelRecurringPaymentResult { Errors = new[] { "Recurring payment not supported" } });
         }
 
         /// <summary>
         /// Returns a value indicating whether payment method should be hidden during checkout
         /// </summary>
-        /// <param name="cart">Shoping cart</param>
-        /// <returns>true - hide; false - display.</returns>
-        public bool HidePaymentMethod(IList<ShoppingCartItem> cart)
+        /// <param name="cart">Shopping cart</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the rue - hide; false - display.
+        /// </returns>
+        public Task<bool> HidePaymentMethodAsync(IList<ShoppingCartItem> cart)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         /// <summary>
         /// Gets additional handling fee
         /// </summary>
-        /// <param name="cart">Shoping cart</param>
-        /// <returns>Additional handling fee</returns>
-        public decimal GetAdditionalHandlingFee(IList<ShoppingCartItem> cart)
+        /// <param name="cart">Shopping cart</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the additional handling fee
+        /// </returns>
+        public Task<decimal> GetAdditionalHandlingFeeAsync(IList<ShoppingCartItem> cart)
         {
-            return decimal.Zero;
+            return Task.FromResult(decimal.Zero);
         }
 
         /// <summary>
         /// Gets a value indicating whether customers can complete a payment after order is placed but not completed (for redirection payment methods)
         /// </summary>
         /// <param name="order">Order</param>
-        /// <returns>Result</returns>
-        public bool CanRePostProcessPayment(Order order)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public Task<bool> CanRePostProcessPaymentAsync(Order order)
         {
-            return true;
+            if (order == null)
+                throw new ArgumentNullException(nameof(order));
+
+            return Task.FromResult(true);
         }
 
         /// <summary>
         /// Validate payment form
         /// </summary>
         /// <param name="form">The parsed form values</param>
-        /// <returns>List of validating errors</returns>
-        public IList<string> ValidatePaymentForm(IFormCollection form)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the list of validating errors
+        /// </returns>
+        public Task<IList<string>> ValidatePaymentFormAsync(IFormCollection form)
         {
-            return new List<string>();
+            return Task.FromResult<IList<string>>(new List<string>());
         }
 
         /// <summary>
         /// Get payment information
         /// </summary>
         /// <param name="form">The parsed form values</param>
-        /// <returns>Payment info holder</returns>
-        public ProcessPaymentRequest GetPaymentInfo(IFormCollection form)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the payment info holder
+        /// </returns>
+        public Task<ProcessPaymentRequest> GetPaymentInfoAsync(IFormCollection form)
         {
-            return new ProcessPaymentRequest();
+            return Task.FromResult(new ProcessPaymentRequest());
         }
 
         /// <summary>
@@ -236,15 +274,18 @@ namespace Nop.Plugin.Payments.Laybuy
         /// <summary>
         /// Gets widget zones where this widget should be rendered
         /// </summary>
-        /// <returns>Widget zones</returns>
-        public IList<string> GetWidgetZones()
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the widget zones
+        /// </returns>
+        public Task<IList<string>> GetWidgetZonesAsync()
         {
-            return new List<string>
+            return Task.FromResult<IList<string>>(new List<string>
             {
                 PublicWidgetZones.ProductDetailsBottom,
                 PublicWidgetZones.ProductBoxAddinfoMiddle,
                 PublicWidgetZones.OrderSummaryContentAfter,
-            };
+            });
         }
 
         /// <summary>
@@ -270,10 +311,10 @@ namespace Nop.Plugin.Payments.Laybuy
         /// <summary>
         /// Install the plugin
         /// </summary>
-        public override void Install()
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public override async Task InstallAsync()
         {
-            //settings
-            _settingService.SaveSetting(new LaybuySettings
+            await _settingService.SaveSettingAsync(new LaybuySettings
             {
                 UseSandbox = true,
                 DisplayPriceBreakdownOnProductPage = true,
@@ -285,11 +326,11 @@ namespace Nop.Plugin.Payments.Laybuy
             if (!_widgetSettings.ActiveWidgetSystemNames.Contains(LaybuyDefaults.SystemName))
             {
                 _widgetSettings.ActiveWidgetSystemNames.Add(LaybuyDefaults.SystemName);
-                _settingService.SaveSetting(_widgetSettings);
+                await _settingService.SaveSettingAsync(_widgetSettings);
             }
 
             //locales
-            _localizationService.AddPluginLocaleResource(new Dictionary<string, string>
+            await _localizationService.AddLocaleResourceAsync(new Dictionary<string, string>
             {
                 ["Plugins.Payments.Laybuy.Currency.Warning"] = "The <a href=\"{0}\" target=\"_blank\">primary store currency</a> ({1}) isn't supported by Laybuy. New Zealand Dollars (NZD), Australian Dollars (AUD) and British Pound (GBP) are currently the only currencies supported.",
                 ["Plugins.Payments.Laybuy.Fields.MerchantId"] = "Merchant ID",
@@ -310,26 +351,32 @@ namespace Nop.Plugin.Payments.Laybuy
                 ["Plugins.Payments.Laybuy.PriceBreakdown"] = "Laybuy price breakdown"
             });
 
-            base.Install();
+            await base.InstallAsync();
         }
 
         /// <summary>
         /// Uninstall the plugin
         /// </summary>
-        public override void Uninstall()
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public override async Task UninstallAsync()
         {
-            //settings
             if (_widgetSettings.ActiveWidgetSystemNames.Contains(LaybuyDefaults.SystemName))
             {
                 _widgetSettings.ActiveWidgetSystemNames.Remove(LaybuyDefaults.SystemName);
-                _settingService.SaveSetting(_widgetSettings);
+                await _settingService.SaveSettingAsync(_widgetSettings);
             }
-            _settingService.DeleteSetting<LaybuySettings>();
+            await _settingService.DeleteSettingAsync<LaybuySettings>();
+            await _localizationService.DeleteLocaleResourcesAsync("Plugins.Payments.Laybuy");
+            await base.UninstallAsync();
+        }
 
-            //locales
-            _localizationService.DeletePluginLocaleResources("Plugins.Payments.Laybuy");
-
-            base.Uninstall();
+        /// <summary>
+        /// Gets a payment method description that will be displayed on checkout pages in the public store
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public async Task<string> GetPaymentMethodDescriptionAsync()
+        {
+            return await _localizationService.GetResourceAsync("Plugins.Payments.Laybuy.PaymentMethodDescription");
         }
 
         #endregion
@@ -370,11 +417,6 @@ namespace Nop.Plugin.Payments.Laybuy
         /// Gets a value indicating whether we should display a payment information page for this plugin
         /// </summary>
         public bool SkipPaymentInfo => true;
-
-        /// <summary>
-        /// Gets a payment method description that will be displayed on checkout pages in the public store
-        /// </summary>
-        public string PaymentMethodDescription => _localizationService.GetResource("Plugins.Payments.Laybuy.PaymentMethodDescription");
 
         /// <summary>
         /// Gets a value indicating whether to hide this plugin on the widget list page in the admin area

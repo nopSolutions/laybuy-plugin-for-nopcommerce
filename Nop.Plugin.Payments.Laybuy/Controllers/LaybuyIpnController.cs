@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Nop.Plugin.Payments.Laybuy.Services;
 using Nop.Services.Messages;
 using Nop.Web.Framework.Controllers;
@@ -6,12 +7,7 @@ using Nop.Web.Framework.Mvc.Filters;
 
 namespace Nop.Plugin.Payments.Laybuy.Controllers
 {
-    [WwwRequirement]
     [CheckAccessPublicStore]
-    [CheckAccessClosedStore]
-    [CheckLanguageSeoCode]
-    [CheckDiscountCoupon]
-    [CheckAffiliate]
     public class LaybuyIpnController : BasePaymentController
     {
         #region Fields
@@ -34,9 +30,9 @@ namespace Nop.Plugin.Payments.Laybuy.Controllers
 
         #region Methods
 
-        public IActionResult IpnHandler(int orderId)
+        public async Task<IActionResult> IpnHandler(int orderId)
         {
-            var (result, errorMessage) = _laybuyManager.ConfirmOrder(orderId);
+            var (result, errorMessage) = await _laybuyManager.ConfirmOrderAsync(orderId);
             if (!result || !string.IsNullOrEmpty(errorMessage))
             {
                 _notificationService.ErrorNotification(errorMessage);

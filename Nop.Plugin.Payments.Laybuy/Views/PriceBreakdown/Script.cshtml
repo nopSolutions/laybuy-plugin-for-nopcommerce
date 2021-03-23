@@ -1,24 +1,28 @@
 ﻿@model (string WidgetZone, string InitialPrice, string Price)
 
+@{
+    var priceBreakdown = await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_View.cshtml", (Model.InitialPrice, Model.Price));
+}
+
 @if (Model.WidgetZone == PublicWidgetZones.ProductDetailsBottom)
 {
     <script asp-location="Footer">
         $(document).ready(function() {
-            $('div.add-info + div.prices, div.overview > div.prices').after(`@await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))`);
+            $('div.add-info + div.prices, div.overview > div.prices').after(`@priceBreakdown`);
         });
     </script>
 }
 
 @if (Model.WidgetZone == PublicWidgetZones.ProductBoxAddinfoMiddle)
 {
-    @await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))
+    @priceBreakdown
 }
 
 @if (Model.WidgetZone == PublicWidgetZones.OrderSummaryContentAfter)
 {
     <script asp-location="Footer">
         $(document).ready(function() {
-            $('div.total-info').after(`@await Html.PartialAsync("~/Plugins/Payments.Laybuy/Views/PriceBreakdown/_view.cshtml", (Model.InitialPrice, Model.Price))`);
+            $('div.total-info').after(`@priceBreakdown`);
         });
     </script>
 }
