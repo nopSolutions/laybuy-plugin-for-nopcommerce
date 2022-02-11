@@ -1,7 +1,7 @@
 ﻿@model (string InitialPrice, string Price)
 
 @{
-    Html.AddCssFileParts("~/Plugins/Payments.Laybuy/Content/styles.css", excludeFromBundle: true);
+    NopHtml.AddCssFileParts("~/Plugins/Payments.Laybuy/Content/styles.css", excludeFromBundle: true);
 }
 
 @if (!string.IsNullOrEmpty(Model.Price))

@@ -330,7 +330,7 @@ namespace Nop.Plugin.Payments.Laybuy
             }
 
             //locales
-            await _localizationService.AddLocaleResourceAsync(new Dictionary<string, string>
+            await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
             {
                 ["Plugins.Payments.Laybuy.Currency.Warning"] = "The <a href=\"{0}\" target=\"_blank\">primary store currency</a> ({1}) isn't supported by Laybuy. New Zealand Dollars (NZD), Australian Dollars (AUD) and British Pound (GBP) are currently the only currencies supported.",
                 ["Plugins.Payments.Laybuy.Fields.MerchantId"] = "Merchant ID",

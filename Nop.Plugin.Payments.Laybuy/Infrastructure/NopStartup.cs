@@ -20,6 +20,7 @@ namespace Nop.Plugin.Payments.Laybuy.Infrastructure
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
             services.AddHttpClient<LaybuyHttpClient>().WithProxy();
+            services.AddScoped<LaybuyManager>();
         }
 
         /// <summary>
