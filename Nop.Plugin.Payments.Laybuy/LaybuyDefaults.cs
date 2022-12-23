@@ -61,10 +61,5 @@ namespace Nop.Plugin.Payments.Laybuy
         /// Gets the name of a generic attribute to store order identifier
         /// </summary>
         public static string OrderId => "LaybuyOrderId";
-
-        /// <summary>
-        /// Gets a name of the view component to display price breakdown
-        /// </summary>
-        public const string PRICE_BREAKDOWN_VIEW_COMPONENT = "LaybuyPriceBreakdownViewComponent";
     }
 }

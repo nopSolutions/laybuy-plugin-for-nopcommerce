@@ -14,7 +14,7 @@ namespace Nop.Plugin.Payments.Laybuy.Components
     /// <summary>
     /// Represents the view component to display price breakdown
     /// </summary>
-    [ViewComponent(Name = LaybuyDefaults.PRICE_BREAKDOWN_VIEW_COMPONENT)]
+    [ViewComponent(Name = "LaybuyPriceBreakdownViewComponent")]
     public class PriceBreakdownViewComponent : NopViewComponent
     {
         #region Fields

@@ -9,6 +9,7 @@ using Nop.Core;
 using Nop.Core.Domain.Cms;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
+using Nop.Plugin.Payments.Laybuy.Components;
 using Nop.Plugin.Payments.Laybuy.Services;
 using Nop.Services.Cms;
 using Nop.Services.Common;
@@ -265,8 +266,7 @@ namespace Nop.Plugin.Payments.Laybuy
         /// <summary>
         /// Gets a view component for displaying plugin in public store ("payment info" checkout step)
         /// </summary>
-        /// <param name="viewComponentName">View component name</param>
-        public string GetPublicViewComponentName()
+        public Type GetPublicViewComponent()
         {
             return null;
         }
@@ -293,7 +293,7 @@ namespace Nop.Plugin.Payments.Laybuy
         /// </summary>
         /// <param name="widgetZone">Name of the widget zone</param>
         /// <returns>View component name</returns>
-        public string GetWidgetViewComponentName(string widgetZone)
+        public Type GetWidgetViewComponent(string widgetZone)
         {
             if (widgetZone == null)
                 throw new ArgumentNullException(nameof(widgetZone));
@@ -301,11 +301,9 @@ namespace Nop.Plugin.Payments.Laybuy
             if (widgetZone.Equals(PublicWidgetZones.ProductDetailsBottom) ||
                 widgetZone.Equals(PublicWidgetZones.ProductBoxAddinfoMiddle) ||
                 widgetZone.Equals(PublicWidgetZones.OrderSummaryContentAfter))
-            {
-                return LaybuyDefaults.PRICE_BREAKDOWN_VIEW_COMPONENT;
-            }
+                return typeof(PriceBreakdownViewComponent);
 
-            return string.Empty;
+            return null;
         }
 
         /// <summary>
